@@ -1,7 +1,6 @@
 import streamlit as st
 import subprocess
 import os
-import tempfile
 
 st.set_page_config(page_title="중국어.분석기", page_icon=None, layout="centered")
 
@@ -201,15 +200,18 @@ uploaded = st.file_uploader(
 )
 
 
+UPLOAD_DIR = os.path.expanduser("~/chinese-book-analyzer/uploads")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+
 def to_jpg(file_bytes, filename):
     ext = os.path.splitext(filename)[1].lower()
-    with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as f:
+    src = os.path.join(UPLOAD_DIR, "current" + ext)
+    with open(src, 'wb') as f:
         f.write(file_bytes)
-        src = f.name
     if ext in ['.heic', '.heif']:
-        dst = src + '.jpg'
+        dst = os.path.join(UPLOAD_DIR, "current.jpg")
         subprocess.run(['sips', '-s', 'format', 'jpeg', src, '--out', dst], capture_output=True)
-        os.unlink(src)
         return dst
     return src
 

@@ -202,50 +202,144 @@ uploaded = st.file_uploader(
 )
 
 
-def to_jpeg_bytes(file_bytes, filename):
+APP_DIR = os.path.expanduser("~/chinese-book-analyzer")
+OCR_SWIFT = os.path.join(APP_DIR, "ocr.swift")
+TMP_IMG = os.path.join(APP_DIR, "uploads", "_current.jpg")
+os.makedirs(os.path.dirname(TMP_IMG), exist_ok=True)
+
+# 언어 → OCR 언어 코드 + 분석 프롬프트 설정
+LANG_CONFIG = {
+    "zh": {
+        "ocr_langs": ["zh-Hans", "zh-Hant", "en-US"],
+        "name": "중국어",
+        "analysis_prompt": (
+            "## 1. 원문\n(전체 텍스트)\n\n"
+            "## 2. 한국어 번역\n\n"
+            "## 3. 문장별 분석\n"
+            "각 문장마다:\n"
+            "- **원문**: 중국어\n"
+            "- **발음**: 병음(Pinyin)\n"
+            "- **번역**: 한국어\n"
+            "- **주요 어휘**: 단어 - 병음 - 뜻\n"
+            "- **문법 포인트**: 특이한 문법/표현"
+        )
+    },
+    "ja": {
+        "ocr_langs": ["ja-JP", "en-US"],
+        "name": "일본어",
+        "analysis_prompt": (
+            "## 1. 원문\n(전체 텍스트)\n\n"
+            "## 2. 한국어 번역\n\n"
+            "## 3. 문장별 분석\n"
+            "각 문장마다:\n"
+            "- **원문**: 일본어\n"
+            "- **발음**: 후리가나(로마자)\n"
+            "- **번역**: 한국어\n"
+            "- **주요 어휘**: 단어 - 읽기 - 뜻\n"
+            "- **문법 포인트**: 특이한 문법/표현"
+        )
+    },
+    "ko": {
+        "ocr_langs": ["ko-KR", "en-US"],
+        "name": "한국어",
+        "analysis_prompt": (
+            "## 1. 원문\n(전체 텍스트)\n\n"
+            "## 2. 어휘 분석\n\n"
+            "## 3. 문장별 분석\n"
+            "각 문장마다:\n"
+            "- **원문**: 한국어\n"
+            "- **어휘**: 어려운 단어 - 뜻\n"
+            "- **문법 포인트**: 특이한 문법/표현"
+        )
+    },
+    "en": {
+        "ocr_langs": ["en-US"],
+        "name": "영어",
+        "analysis_prompt": (
+            "## 1. 원문\n(전체 텍스트)\n\n"
+            "## 2. 한국어 번역\n\n"
+            "## 3. 문장별 분석\n"
+            "각 문장마다:\n"
+            "- **원문**: 영어\n"
+            "- **번역**: 한국어\n"
+            "- **주요 어휘**: 단어 - 뜻\n"
+            "- **문법 포인트**: 특이한 표현/숙어"
+        )
+    }
+}
+
+
+def detect_language(text: str) -> str:
+    """Unicode 범위로 주요 언어 감지"""
+    cjk = sum(1 for c in text if '一' <= c <= '鿿')
+    hiragana = sum(1 for c in text if '぀' <= c <= 'ゟ')
+    katakana = sum(1 for c in text if '゠' <= c <= 'ヿ')
+    hangul = sum(1 for c in text if '가' <= c <= '퟿')
+    total = max(len(text), 1)
+    if hangul / total > 0.1:
+        return "ko"
+    if (hiragana + katakana) / total > 0.05:
+        return "ja"
+    if cjk / total > 0.1:
+        return "zh"
+    return "en"
+
+
+def ocr_image(image_path: str, lang_code: str = None) -> tuple[str, str]:
+    """Vision 프레임워크로 OCR 수행 → (추출텍스트, 감지언어코드)"""
+    # 1차: 자동 감지로 전체 언어 시도
+    langs = LANG_CONFIG.get(lang_code, {}).get("ocr_langs") or \
+            ["zh-Hans", "zh-Hant", "ja-JP", "ko-KR", "en-US"]
+
+    proc = subprocess.run(
+        ["swift", OCR_SWIFT, image_path] + langs,
+        capture_output=True, text=True, timeout=30
+    )
+    text = proc.stdout.strip()
+
+    # 언어 감지
+    detected = detect_language(text) if text else (lang_code or "zh")
+
+    # 감지된 언어가 다르면 해당 언어 설정으로 재시도
+    if detected != lang_code and detected in LANG_CONFIG:
+        specific_langs = LANG_CONFIG[detected]["ocr_langs"]
+        proc2 = subprocess.run(
+            ["swift", OCR_SWIFT, image_path] + specific_langs,
+            capture_output=True, text=True, timeout=30
+        )
+        if proc2.stdout.strip():
+            text = proc2.stdout.strip()
+
+    return text, detected
+
+
+def save_image(file_bytes: bytes, filename: str) -> str:
+    """업로드 파일을 JPEG로 변환해 저장"""
     ext = os.path.splitext(filename)[1].lower()
+    raw_path = TMP_IMG.replace('.jpg', ext)
+    with open(raw_path, 'wb') as f:
+        f.write(file_bytes)
     if ext in ['.heic', '.heif']:
-        import tempfile
-        with tempfile.NamedTemporaryFile(suffix='.heic', delete=False) as f:
-            f.write(file_bytes)
-            src = f.name
-        dst = src + '.jpg'
-        subprocess.run(['sips', '-s', 'format', 'jpeg', '-s', 'formatOptions', '60',
-                        src, '--out', dst], capture_output=True)
-        os.unlink(src)
-        with open(dst, 'rb') as f:
-            data = f.read()
-        os.unlink(dst)
-        return data, 'image/jpeg'
-    media = {'.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
-             '.png': 'image/png', '.webp': 'image/webp'}
-    return file_bytes, media.get(ext, 'image/jpeg')
+        subprocess.run(['sips', '-s', 'format', 'jpeg', raw_path, '--out', TMP_IMG],
+                       capture_output=True)
+    else:
+        import shutil
+        shutil.copy(raw_path, TMP_IMG)
+    return TMP_IMG
 
 
-def analyze(image_bytes, media_type):
-    img_b64 = base64.standard_b64encode(image_bytes).decode()
+def analyze(ocr_text: str, lang_code: str) -> str:
+    """OCR 텍스트를 Claude로 분석"""
+    cfg = LANG_CONFIG.get(lang_code, LANG_CONFIG["zh"])
     prompt = (
-        "이 책 페이지의 중국어 텍스트를 분석해주세요.\n\n"
-        "## 1. 원문\n(페이지 텍스트 전체)\n\n"
-        "## 2. 한국어 번역\n(전체 번역)\n\n"
-        "## 3. 문장별 분석\n"
-        "각 문장마다:\n"
-        "- **원문**: 중국어\n"
-        "- **발음**: 병음(Pinyin)\n"
-        "- **번역**: 한국어\n"
-        "- **주요 어휘**: 단어 - 병음 - 뜻\n"
-        "- **문법 포인트**: 특이한 문법/표현 설명"
+        f"다음은 {cfg['name']} 책 페이지에서 OCR로 추출한 텍스트입니다.\n"
+        f"아래 형식으로 분석해주세요.\n\n"
+        f"{cfg['analysis_prompt']}\n\n"
+        f"---\n{ocr_text}"
     )
     msg = json.dumps({
         "type": "user",
-        "message": {
-            "role": "user",
-            "content": [
-                {"type": "image", "source": {
-                    "type": "base64", "media_type": media_type, "data": img_b64}},
-                {"type": "text", "text": prompt}
-            ]
-        }
+        "message": {"role": "user", "content": [{"type": "text", "text": prompt}]}
     })
     env = dict(os.environ)
     env.pop('CLAUDECODE', None)
@@ -257,7 +351,7 @@ def analyze(image_bytes, media_type):
         input=msg, capture_output=True, text=True, env=env, timeout=120
     )
     if proc.returncode != 0:
-        raise RuntimeError(proc.stderr[:400] or f"claude 실행 실패 (code {proc.returncode})")
+        raise RuntimeError(proc.stderr[:400] or f"Claude 실행 실패 (code {proc.returncode})")
     for line in proc.stdout.splitlines():
         try:
             obj = json.loads(line)
@@ -270,27 +364,45 @@ def analyze(image_bytes, media_type):
     raise RuntimeError("응답을 파싱할 수 없습니다.")
 
 
+LANG_LABELS = {"zh": "🇨🇳 중국어", "ja": "🇯🇵 일본어", "ko": "🇰🇷 한국어", "en": "🇺🇸 영어"}
+
 if uploaded:
     file_bytes = uploaded.read()
-    image_bytes, media_type = to_jpeg_bytes(file_bytes, uploaded.name)
+    img_path = save_image(file_bytes, uploaded.name)
 
     col1, col2 = st.columns([1, 2], gap="large")
     with col1:
-        st.image(image_bytes, use_container_width=True)
+        st.image(img_path, use_container_width=True)
 
     with col2:
         st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
         name = os.path.splitext(uploaded.name)[0]
-        st.markdown(f"<div style='font-size:12px;color:#4a4a4a;letter-spacing:0.08em;margin-bottom:20px'>{name}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='font-size:12px;color:#4a4a4a;letter-spacing:0.08em;margin-bottom:16px'>{name}</div>",
+                    unsafe_allow_html=True)
 
         if st.button("분 석"):
-            with st.spinner(""):
-                try:
-                    result = analyze(image_bytes, media_type)
-                    st.markdown("---")
-                    st.markdown(result)
-                except Exception as e:
-                    st.error(str(e))
+            with st.spinner("OCR 중..."):
+                ocr_text, lang_code = ocr_image(img_path)
+
+            if not ocr_text.strip():
+                st.error("텍스트를 인식하지 못했습니다.")
+            else:
+                lang_label = LANG_LABELS.get(lang_code, lang_code)
+                st.markdown(
+                    f"<div style='font-size:10px;letter-spacing:0.12em;color:#4a4a4a;margin-bottom:16px'>"
+                    f"감지 언어: {lang_label} · Vision OCR</div>",
+                    unsafe_allow_html=True
+                )
+                with st.expander("OCR 원문 보기", expanded=False):
+                    st.code(ocr_text, language=None)
+
+                with st.spinner("분석 중..."):
+                    try:
+                        result = analyze(ocr_text, lang_code)
+                        st.markdown("---")
+                        st.markdown(result)
+                    except Exception as e:
+                        st.error(str(e))
 
 
 # ── 하단 ──────────────────────────────────────────

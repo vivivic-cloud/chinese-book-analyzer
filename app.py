@@ -1,6 +1,8 @@
 import streamlit as st
 import subprocess
 import os
+import base64
+import json
 
 st.set_page_config(page_title="중국어.분석기", page_icon=None, layout="centered")
 
@@ -200,25 +202,28 @@ uploaded = st.file_uploader(
 )
 
 
-UPLOAD_DIR = os.path.expanduser("~/chinese-book-analyzer/uploads")
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-
-def to_jpg(file_bytes, filename):
+def to_jpeg_bytes(file_bytes, filename):
     ext = os.path.splitext(filename)[1].lower()
-    src = os.path.join(UPLOAD_DIR, "current" + ext)
-    with open(src, 'wb') as f:
-        f.write(file_bytes)
     if ext in ['.heic', '.heif']:
-        dst = os.path.join(UPLOAD_DIR, "current.jpg")
-        subprocess.run(['sips', '-s', 'format', 'jpeg', src, '--out', dst], capture_output=True)
-        return dst
-    return src
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix='.heic', delete=False) as f:
+            f.write(file_bytes)
+            src = f.name
+        dst = src + '.jpg'
+        subprocess.run(['sips', '-s', 'format', 'jpeg', '-s', 'formatOptions', '60',
+                        src, '--out', dst], capture_output=True)
+        os.unlink(src)
+        with open(dst, 'rb') as f:
+            data = f.read()
+        os.unlink(dst)
+        return data, 'image/jpeg'
+    media = {'.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+             '.png': 'image/png', '.webp': 'image/webp'}
+    return file_bytes, media.get(ext, 'image/jpeg')
 
 
-def analyze(tmp_path):
-    env = dict(os.environ)
-    env.pop('CLAUDECODE', None)
+def analyze(image_bytes, media_type):
+    img_b64 = base64.standard_b64encode(image_bytes).decode()
     prompt = (
         "이 책 페이지의 중국어 텍스트를 분석해주세요.\n\n"
         "## 1. 원문\n(페이지 텍스트 전체)\n\n"
@@ -229,24 +234,48 @@ def analyze(tmp_path):
         "- **발음**: 병음(Pinyin)\n"
         "- **번역**: 한국어\n"
         "- **주요 어휘**: 단어 - 병음 - 뜻\n"
-        "- **문법 포인트**: 특이한 문법/표현 설명\n\n"
-        f": @{tmp_path}"
+        "- **문법 포인트**: 특이한 문법/표현 설명"
     )
+    msg = json.dumps({
+        "type": "user",
+        "message": {
+            "role": "user",
+            "content": [
+                {"type": "image", "source": {
+                    "type": "base64", "media_type": media_type, "data": img_b64}},
+                {"type": "text", "text": prompt}
+            ]
+        }
+    })
+    env = dict(os.environ)
+    env.pop('CLAUDECODE', None)
     proc = subprocess.run(
-        ['claude', '--print', prompt],
-        capture_output=True, text=True, env=env, timeout=120
+        ['claude', '--print', '--verbose',
+         '--input-format', 'stream-json',
+         '--output-format', 'stream-json'],
+        input=msg, capture_output=True, text=True, env=env, timeout=120
     )
     if proc.returncode != 0:
         raise RuntimeError(proc.stderr[:400] or "분석 실패")
-    return proc.stdout.strip()
+    for line in proc.stdout.splitlines():
+        try:
+            obj = json.loads(line)
+            if obj.get('type') == 'assistant':
+                for block in obj.get('message', {}).get('content', []):
+                    if block.get('type') == 'text':
+                        return block['text']
+        except Exception:
+            pass
+    raise RuntimeError("응답을 파싱할 수 없습니다.")
 
 
 if uploaded:
-    tmp_path = to_jpg(uploaded.read(), uploaded.name)
+    file_bytes = uploaded.read()
+    image_bytes, media_type = to_jpeg_bytes(file_bytes, uploaded.name)
 
     col1, col2 = st.columns([1, 2], gap="large")
     with col1:
-        st.image(tmp_path, use_container_width=True)
+        st.image(image_bytes, use_container_width=True)
 
     with col2:
         st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
@@ -256,7 +285,7 @@ if uploaded:
         if st.button("분 석"):
             with st.spinner(""):
                 try:
-                    result = analyze(tmp_path)
+                    result = analyze(image_bytes, media_type)
                     st.markdown("---")
                     st.markdown(result)
                 except Exception as e:

@@ -96,12 +96,12 @@ footer{padding:16px 0;margin-top:60px;display:flex;justify-content:space-between
   <hr class="rule">
   <div class="meta">페이지 분석 ▶</div>
 
-  <div class="drop-zone" id="drop">
+  <label class="drop-zone" id="drop" for="fi">
     <div class="drop-hint">
       이미지를 드래그하거나 클릭해서 올려주세요<br>
       <small>HEIC · JPG · PNG · WEBP</small>
     </div>
-  </div>
+  </label>
   <input type="file" id="fi" accept=".heic,.heif,.jpg,.jpeg,.png,.webp,image/*">
 
   <div class="preview" id="preview">
@@ -137,8 +137,7 @@ let imgB64 = null;
 const drop = document.getElementById('drop');
 const fi = document.getElementById('fi');
 
-// Click to open file dialog
-drop.addEventListener('click', () => fi.click());
+// label[for=fi] handles click natively
 
 // Drag & drop
 drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });

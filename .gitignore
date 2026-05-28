@@ -1,0 +1,9 @@
+.api_key
+*.HEIC
+*.heic
+*.jpg
+*.png
+*.webp
+__pycache__/
+*.pyc
+.DS_Store

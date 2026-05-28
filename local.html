@@ -13,61 +13,69 @@ html,body{background:#1a1a1a;color:#c8c8c8;font-family:'Inter',-apple-system,Bli
 header{padding:28px 0;display:flex;justify-content:space-between;align-items:center}
 .logo{font-size:14px;color:#c8c8c8;letter-spacing:.01em}
 .logo b{font-weight:600;color:#fff}
-.badge{font-size:10px;color:#2a3a2a;letter-spacing:.1em;text-transform:uppercase;border:1px solid #1e2e1e;padding:3px 8px}
+.badge{font-size:10px;color:#4a7a4a;letter-spacing:.1em;text-transform:uppercase;border:1px solid #2a4a2a;padding:3px 8px}
 hr.rule{border:none;border-top:1px solid #2e2e2e}
-.meta{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#3a3a3a;text-align:right;padding:12px 0 24px}
+.meta{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#555;text-align:right;padding:12px 0 24px}
 
-.drop-zone{border:1px dashed #252525;padding:56px 40px;text-align:center;cursor:pointer;transition:border-color .15s}
-.drop-zone:hover,.drop-zone.over{border-color:#3a3a3a}
-.drop-hint{font-size:12px;color:#2e2e2e;letter-spacing:.06em;line-height:2}
+/* ── Upload ── */
+.drop-zone{border:1px dashed #3a3a3a;padding:56px 40px;text-align:center;cursor:pointer;transition:border-color .15s}
+.drop-zone:hover,.drop-zone.over{border-color:#666;background:#1d1d1d}
+.drop-hint{font-size:13px;color:#888;letter-spacing:.04em;line-height:2.2}
+.drop-hint small{font-size:11px;color:#555;letter-spacing:.08em}
 input[type=file]{display:none}
 
+/* ── Preview ── */
 .preview{display:none;gap:32px;margin:28px 0;align-items:flex-start}
 .preview.show{display:flex}
-.preview img{width:180px;height:240px;object-fit:cover;border:1px solid #242424;flex-shrink:0}
+.preview img{width:180px;height:240px;object-fit:cover;border:1px solid #333;flex-shrink:0}
 .preview-info{flex:1;padding-top:4px;display:flex;flex-direction:column;gap:14px}
-.file-name{font-size:11px;color:#333;letter-spacing:.06em}
+.file-name{font-size:12px;color:#777;letter-spacing:.04em;word-break:break-all}
 
-.btn{background:transparent;border:1px solid #2e2e2e;color:#666;font-size:10px;letter-spacing:.16em;text-transform:uppercase;padding:10px 24px;cursor:pointer;font-family:inherit;transition:all .15s}
-.btn:hover:not(:disabled){border-color:#555;color:#bbb}
+/* ── Buttons ── */
+.btn{background:transparent;border:1px solid #3a3a3a;color:#888;font-size:10px;letter-spacing:.16em;text-transform:uppercase;padding:10px 24px;cursor:pointer;font-family:inherit;transition:all .15s}
+.btn:hover:not(:disabled){border-color:#666;color:#ccc}
 .btn:disabled{opacity:.3;cursor:not-allowed}
-.btn-go{border-color:#3a3a3a;color:#888}
-.btn-go:hover:not(:disabled){border-color:#777;color:#e0e0e0}
+.btn-go{border-color:#444;color:#aaa}
+.btn-go:hover:not(:disabled){border-color:#888;color:#eee}
 
-.status{font-size:11px;color:#3a3a3a;letter-spacing:.06em}
-.progress{height:1px;background:#222;overflow:hidden;display:none}
+/* ── Status ── */
+.status{font-size:11px;color:#888;letter-spacing:.06em}
+.progress{height:1px;background:#2a2a2a;overflow:hidden;display:none}
 .progress.show{display:block}
-.progress-fill{height:100%;background:#444;width:0%;transition:width .4s}
-.error-msg{font-size:12px;color:#7a3535;letter-spacing:.04em;padding:12px;border:1px solid #3d1f1f;display:none}
+.progress-fill{height:100%;background:#666;width:0%;transition:width .4s}
+.error-msg{font-size:12px;color:#c06060;letter-spacing:.04em;padding:12px;border:1px solid #5a2a2a;display:none;line-height:1.6}
 .error-msg.show{display:block}
 
+/* ── Results ── */
 #results{display:none;margin-top:8px}
 #results.show{display:block}
-.ocr-toggle{font-size:10px;letter-spacing:.12em;color:#2e2e2e;cursor:pointer;text-transform:uppercase;padding:16px 0;display:inline-block}
-.ocr-toggle:hover{color:#555}
-.ocr-box{background:#171717;border:1px solid #222;padding:16px;font-size:12px;color:#3a3a3a;line-height:1.8;white-space:pre-wrap;word-break:break-all;display:none;margin-bottom:8px}
+.ocr-toggle{font-size:10px;letter-spacing:.12em;color:#666;cursor:pointer;text-transform:uppercase;padding:16px 0;display:inline-block}
+.ocr-toggle:hover{color:#999}
+.ocr-box{background:#171717;border:1px solid #2a2a2a;padding:16px;font-size:12px;color:#777;line-height:1.9;white-space:pre-wrap;word-break:break-all;display:none;margin-bottom:8px}
 .ocr-box.show{display:block}
-.lang-badge{font-size:10px;letter-spacing:.12em;color:#2e2e2e;text-transform:uppercase;padding:14px 0 4px;display:block}
+.lang-badge{font-size:10px;letter-spacing:.12em;color:#666;text-transform:uppercase;padding:14px 0 4px;display:block}
 
-.sentence{display:flex;gap:20px;padding:28px 0;border-bottom:1px solid #1e1e1e}
+/* ── Sentences ── */
+.sentence{display:flex;gap:20px;padding:28px 0;border-bottom:1px solid #222}
 .sentence:last-child{border-bottom:none}
-.s-num{font-size:10px;letter-spacing:.14em;color:#252525;min-width:22px;padding-top:6px;text-align:right;flex-shrink:0}
+.s-num{font-size:10px;letter-spacing:.14em;color:#555;min-width:22px;padding-top:6px;text-align:right;flex-shrink:0}
 .s-body{flex:1;min-width:0}
-.s-text{font-size:18px;line-height:2.4;color:#d0d0d0;margin-bottom:10px;word-break:break-all}
-.s-trans{font-size:12px;color:#383838;line-height:1.7}
+.s-text{font-size:18px;line-height:2.4;color:#d8d8d8;margin-bottom:10px;word-break:break-all}
+.s-trans{font-size:13px;color:#888;line-height:1.7}
 .token{cursor:pointer;border-bottom:1px solid transparent;transition:color .1s,border-color .1s;padding:0 1px}
-.token:hover{color:#fff;border-bottom-color:#555}
-.token.active{color:#fff;border-bottom-color:#888}
+.token:hover{color:#fff;border-bottom-color:#777}
+.token.active{color:#fff;border-bottom-color:#aaa}
 
-#popup{position:fixed;background:#1c1c1c;border:1px solid #282828;padding:20px 22px;min-width:252px;max-width:320px;z-index:9999;display:none;box-shadow:0 16px 48px rgba(0,0,0,.85)}
-.pop-close{position:absolute;top:10px;right:13px;cursor:pointer;color:#2e2e2e;font-size:12px;line-height:1}
-.pop-close:hover{color:#555}
-.pop-word{font-size:26px;font-weight:300;color:#fff;margin-bottom:3px;letter-spacing:.04em}
-.pop-read{font-size:12px;color:#484848;letter-spacing:.1em;margin-bottom:14px;font-style:italic}
-.pop-mean{font-size:14px;color:#a8a8a8;line-height:1.7;margin-bottom:10px}
-.pop-gram{font-size:10px;color:#303030;letter-spacing:.12em;text-transform:uppercase}
+/* ── Popup ── */
+#popup{position:fixed;background:#202020;border:1px solid #333;padding:20px 22px;min-width:252px;max-width:320px;z-index:9999;display:none;box-shadow:0 16px 48px rgba(0,0,0,.9)}
+.pop-close{position:absolute;top:10px;right:13px;cursor:pointer;color:#555;font-size:13px;line-height:1}
+.pop-close:hover{color:#aaa}
+.pop-word{font-size:26px;font-weight:300;color:#fff;margin-bottom:4px;letter-spacing:.04em}
+.pop-read{font-size:12px;color:#888;letter-spacing:.1em;margin-bottom:14px;font-style:italic}
+.pop-mean{font-size:14px;color:#c0c0c0;line-height:1.7;margin-bottom:10px}
+.pop-gram{font-size:10px;color:#666;letter-spacing:.12em;text-transform:uppercase}
 
-footer{padding:16px 0;margin-top:60px;display:flex;justify-content:space-between;font-size:10px;color:#222;letter-spacing:.06em;border-top:1px solid #1e1e1e}
+footer{padding:16px 0;margin-top:60px;display:flex;justify-content:space-between;font-size:10px;color:#444;letter-spacing:.06em;border-top:1px solid #222}
 </style>
 </head>
 <body>
@@ -88,10 +96,10 @@ footer{padding:16px 0;margin-top:60px;display:flex;justify-content:space-between
   <hr class="rule">
   <div class="meta">페이지 분석 ▶</div>
 
-  <div class="drop-zone" id="drop" onclick="document.getElementById('fi').click()">
+  <div class="drop-zone" id="drop">
     <div class="drop-hint">
       이미지를 드래그하거나 클릭해서 올려주세요<br>
-      <span style="font-size:10px;color:#222;letter-spacing:.08em">HEIC · JPG · PNG · WEBP</span>
+      <small>HEIC · JPG · PNG · WEBP</small>
     </div>
   </div>
   <input type="file" id="fi" accept=".heic,.heif,.jpg,.jpeg,.png,.webp,image/*">
@@ -127,18 +135,36 @@ let imgB64 = null;
 
 // ── Upload ────────────────────────────────────────────
 const drop = document.getElementById('drop');
+const fi = document.getElementById('fi');
+
+// Click to open file dialog
+drop.addEventListener('click', () => fi.click());
+
+// Drag & drop
 drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
-drop.addEventListener('dragleave', () => drop.classList.remove('over'));
-drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]); });
-document.getElementById('fi').addEventListener('change', e => { if (e.target.files[0]) processFile(e.target.files[0]); });
+drop.addEventListener('dragleave', e => { if (!drop.contains(e.relatedTarget)) drop.classList.remove('over'); });
+drop.addEventListener('drop', e => {
+  e.preventDefault(); drop.classList.remove('over');
+  const file = e.dataTransfer.files[0];
+  if (file) processFile(file);
+});
+
+// File input change
+fi.addEventListener('change', () => {
+  if (fi.files[0]) {
+    processFile(fi.files[0]);
+    fi.value = ''; // reset so same file can be re-selected
+  }
+});
 
 async function processFile(file) {
   setStatus('처리 중...'); prog(20); clearErr(); clearResults();
   try {
     let blob = file;
-    if (/\.heic$|\.heif$/i.test(file.name)) {
+    const name = file.name.toLowerCase();
+    if (name.endsWith('.heic') || name.endsWith('.heif')) {
       setStatus('HEIC 변환 중...');
-      blob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.7 });
+      blob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.85 });
       if (Array.isArray(blob)) blob = blob[0];
     }
     prog(60);
@@ -147,7 +173,10 @@ async function processFile(file) {
     document.getElementById('prev-name').textContent = file.name;
     document.getElementById('preview').classList.add('show');
     prog(0); setStatus('');
-  } catch(e) { showErr('파일 처리 실패: ' + e.message); prog(0); }
+  } catch(e) {
+    showErr('파일 처리 실패: ' + e.message);
+    prog(0); setStatus('');
+  }
 }
 
 function compress(blob) {
@@ -161,11 +190,11 @@ function compress(blob) {
       const c = document.createElement('canvas');
       c.width = w; c.height = h;
       c.getContext('2d').drawImage(img, 0, 0, w, h);
-      const b64 = c.toDataURL('image/jpeg', 0.75).split(',')[1];
+      const b64 = c.toDataURL('image/jpeg', 0.85).split(',')[1];
       URL.revokeObjectURL(url);
       res(b64);
     };
-    img.onerror = rej;
+    img.onerror = () => rej(new Error('이미지 로드 실패'));
     img.src = url;
   });
 }
@@ -178,9 +207,8 @@ async function runAnalysis() {
   setStatus('분석 중... (1~2분 소요)');
   prog(15);
 
-  // Fake progress animation
   let p = 15;
-  const tick = setInterval(() => { p = Math.min(p + 3, 85); prog(p); }, 3000);
+  const tick = setInterval(() => { p = Math.min(p + 2, 85); prog(p); }, 4000);
 
   try {
     const r = await fetch('/analyze', {
@@ -245,22 +273,31 @@ function showPopup(tok, el) {
   document.getElementById('pm').textContent = tok.meaning || '';
   document.getElementById('pg').textContent = tok.grammar || '';
   popup.style.display = 'block';
-  const r = el.getBoundingClientRect();
-  let x = r.left, y = r.bottom + 8;
+  const rect = el.getBoundingClientRect();
+  let x = rect.left, y = rect.bottom + 8;
   if (x + 330 > window.innerWidth) x = window.innerWidth - 334;
-  if (y + 190 > window.innerHeight) y = r.top - 195;
+  if (y + 200 > window.innerHeight) y = rect.top - 205;
   popup.style.left = Math.max(4, x) + 'px';
   popup.style.top = Math.max(4, y) + 'px';
 }
-function closePopup() { popup.style.display = 'none'; if (active) { active.classList.remove('active'); active = null; } }
-document.addEventListener('click', e => { if (!popup.contains(e.target) && !e.target.classList.contains('token')) closePopup(); });
+function closePopup() {
+  popup.style.display = 'none';
+  if (active) { active.classList.remove('active'); active = null; }
+}
+document.addEventListener('click', e => {
+  if (!popup.contains(e.target) && !e.target.classList.contains('token')) closePopup();
+});
 
 // ── Helpers ───────────────────────────────────────────
 function setStatus(t) { document.getElementById('status').textContent = t; }
-function prog(p) { const el = document.getElementById('prog'); el.classList.toggle('show', p > 0); document.getElementById('pfill').style.width = p + '%'; }
+function prog(p) { document.getElementById('prog').classList.toggle('show', p > 0); document.getElementById('pfill').style.width = p + '%'; }
 function showErr(m) { const e = document.getElementById('err'); e.textContent = m; e.classList.add('show'); }
 function clearErr() { document.getElementById('err').classList.remove('show'); }
-function clearResults() { document.getElementById('results').classList.remove('show'); document.getElementById('sent-list').innerHTML = ''; document.getElementById('ocr-box').classList.remove('show'); }
+function clearResults() {
+  document.getElementById('results').classList.remove('show');
+  document.getElementById('sent-list').innerHTML = '';
+  document.getElementById('ocr-box').classList.remove('show');
+}
 function toggleOcr() {
   const box = document.getElementById('ocr-box'), tog = document.getElementById('ocr-toggle');
   box.classList.toggle('show');

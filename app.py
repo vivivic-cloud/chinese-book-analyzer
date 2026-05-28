@@ -1,8 +1,10 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import subprocess
 import os
 import base64
 import json
+import re
 
 st.set_page_config(page_title="중국어.분석기", page_icon=None, layout="centered")
 
@@ -328,15 +330,44 @@ def save_image(file_bytes: bytes, filename: str) -> str:
     return TMP_IMG
 
 
-def analyze(ocr_text: str, lang_code: str) -> str:
-    """OCR 텍스트를 Claude로 분석"""
+def analyze(ocr_text: str, lang_code: str) -> dict:
+    """OCR 텍스트 → Claude 분석 → JSON 반환"""
     cfg = LANG_CONFIG.get(lang_code, LANG_CONFIG["zh"])
-    prompt = (
-        f"다음은 {cfg['name']} 책 페이지에서 OCR로 추출한 텍스트입니다.\n"
-        f"아래 형식으로 분석해주세요.\n\n"
-        f"{cfg['analysis_prompt']}\n\n"
-        f"---\n{ocr_text}"
-    )
+
+    if lang_code == "zh":
+        token_example = '{"text":"真正","pinyin":"zhēnzhèng","meaning":"진정한, 참된","grammar":"부사/형용사"}'
+        token_fields = '"text","pinyin","meaning","grammar"'
+    elif lang_code == "ja":
+        token_example = '{"text":"永遠","reading":"えいえん","meaning":"영원","grammar":"명사"}'
+        token_fields = '"text","reading","meaning","grammar"'
+    else:
+        token_example = '{"text":"however","meaning":"그러나","grammar":"접속부사"}'
+        token_fields = '"text","meaning","grammar"'
+
+    prompt = f"""다음 {cfg['name']} 텍스트를 분석하여 아래 JSON 형식으로만 응답하세요.
+마크다운, 설명, 코드블록 없이 순수 JSON만 출력하세요.
+
+{{
+  "sentences": [
+    {{
+      "id": 1,
+      "original": "원문 문장",
+      "translation": "한국어 번역",
+      "tokens": [
+        {token_example}
+      ]
+    }}
+  ]
+}}
+
+규칙:
+- tokens는 의미 단위(단어·숙어·문법요소)로 분리
+- 문장부호는 별도 토큰으로 포함
+- {token_fields} 필드 포함
+
+텍스트:
+{ocr_text}"""
+
     msg = json.dumps({
         "type": "user",
         "message": {"role": "user", "content": [{"type": "text", "text": prompt}]}
@@ -348,20 +379,125 @@ def analyze(ocr_text: str, lang_code: str) -> str:
         [claude_bin, '--print', '--verbose',
          '--input-format', 'stream-json',
          '--output-format', 'stream-json'],
-        input=msg, capture_output=True, text=True, env=env, timeout=120
+        input=msg, capture_output=True, text=True, env=env, timeout=180
     )
     if proc.returncode != 0:
         raise RuntimeError(proc.stderr[:400] or f"Claude 실행 실패 (code {proc.returncode})")
+
+    raw = None
     for line in proc.stdout.splitlines():
         try:
             obj = json.loads(line)
             if obj.get('type') == 'assistant':
                 for block in obj.get('message', {}).get('content', []):
                     if block.get('type') == 'text':
-                        return block['text']
+                        raw = block['text']
         except Exception:
             pass
-    raise RuntimeError("응답을 파싱할 수 없습니다.")
+
+    if not raw:
+        raise RuntimeError("응답 없음")
+
+    # JSON 추출 (코드블록 제거)
+    text = raw.strip()
+    m = re.search(r'\{[\s\S]*\}', text)
+    if m:
+        text = m.group(0)
+    return json.loads(text)
+
+
+def render_interactive(data: dict, lang_code: str) -> str:
+    space = "true" if lang_code in ("ko", "en") else "false"
+    data_json = json.dumps(data, ensure_ascii=False)
+
+    return f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+*{{box-sizing:border-box;margin:0;padding:0}}
+body{{background:transparent;font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;color:#c8c8c8;padding:4px 0 60px}}
+.sentence{{display:flex;gap:20px;padding:28px 0;border-bottom:1px solid #222}}
+.sentence:last-child{{border-bottom:none}}
+.num{{font-size:10px;letter-spacing:.14em;color:#2e2e2e;min-width:22px;padding-top:6px;text-align:right;flex-shrink:0}}
+.body{{flex:1;min-width:0}}
+.original{{font-size:18px;line-height:2.2;color:#d4d4d4;margin-bottom:10px;word-break:break-all}}
+.translation{{font-size:12px;color:#3a3a3a;line-height:1.7;letter-spacing:.02em}}
+.token{{cursor:pointer;display:inline;border-bottom:1px solid transparent;transition:color .1s,border-color .1s;padding:0 1px}}
+.token:hover{{color:#fff;border-bottom-color:#555}}
+.token.active{{color:#fff;border-bottom-color:#888}}
+#popup{{position:fixed;background:#1c1c1c;border:1px solid #2a2a2a;padding:20px 22px;min-width:250px;max-width:320px;z-index:9999;display:none;box-shadow:0 16px 48px rgba(0,0,0,.8)}}
+.p-close{{position:absolute;top:10px;right:14px;cursor:pointer;color:#333;font-size:12px;line-height:1}}
+.p-close:hover{{color:#666}}
+.p-word{{font-size:26px;font-weight:300;color:#fff;margin-bottom:3px;letter-spacing:.04em}}
+.p-reading{{font-size:12px;color:#555;letter-spacing:.1em;margin-bottom:14px;font-style:italic}}
+.p-meaning{{font-size:14px;color:#b0b0b0;line-height:1.7;margin-bottom:10px}}
+.p-grammar{{font-size:10px;color:#3a3a3a;letter-spacing:.12em;text-transform:uppercase}}
+</style></head><body>
+<div id="popup">
+  <span class="p-close" onclick="closePopup()">✕</span>
+  <div class="p-word" id="pw"></div>
+  <div class="p-reading" id="pr"></div>
+  <div class="p-meaning" id="pm"></div>
+  <div class="p-grammar" id="pg"></div>
+</div>
+<div id="content"></div>
+<script>
+const DATA={data_json};
+const spaceTokens={space};
+const popup=document.getElementById('popup');
+let active=null;
+
+function closePopup(){{
+  popup.style.display='none';
+  if(active){{active.classList.remove('active');active=null;}}
+}}
+
+function showPopup(tok,el){{
+  if(active)active.classList.remove('active');
+  active=el;el.classList.add('active');
+  document.getElementById('pw').textContent=tok.text||'';
+  document.getElementById('pr').textContent=tok.pinyin||tok.reading||'';
+  document.getElementById('pm').textContent=tok.meaning||'';
+  document.getElementById('pg').textContent=tok.grammar||'';
+  popup.style.display='block';
+  const r=el.getBoundingClientRect();
+  const pw=320,ph=180;
+  let x=r.left,y=r.bottom+8;
+  if(x+pw>window.innerWidth-8)x=window.innerWidth-pw-8;
+  if(y+ph>window.innerHeight)y=r.top-ph-8;
+  if(y<0)y=8;
+  popup.style.left=Math.max(4,x)+'px';
+  popup.style.top=y+'px';
+}}
+
+document.addEventListener('click',function(e){{
+  if(!popup.contains(e.target)&&!e.target.classList.contains('token'))closePopup();
+}});
+
+const content=document.getElementById('content');
+(DATA.sentences||[]).forEach(s=>{{
+  const wrap=document.createElement('div');
+  wrap.className='sentence';
+  const num=document.createElement('div');
+  num.className='num';num.textContent=s.id;
+  const body=document.createElement('div');
+  body.className='body';
+  const orig=document.createElement('div');
+  orig.className='original';
+  (s.tokens||[]).forEach((tok,i)=>{{
+    const span=document.createElement('span');
+    span.className='token';
+    span.textContent=tok.text;
+    span.addEventListener('click',function(e){{e.stopPropagation();showPopup(tok,this);}});
+    orig.appendChild(span);
+    if(spaceTokens&&i<s.tokens.length-1)orig.appendChild(document.createTextNode(' '));
+  }});
+  const trans=document.createElement('div');
+  trans.className='translation';trans.textContent=s.translation||'';
+  body.appendChild(orig);body.appendChild(trans);
+  wrap.appendChild(num);wrap.appendChild(body);
+  content.appendChild(wrap);
+}});
+</script></body></html>"""
 
 
 LANG_LABELS = {"zh": "🇨🇳 중국어", "ja": "🇯🇵 일본어", "ko": "🇰🇷 한국어", "en": "🇺🇸 영어"}
@@ -389,20 +525,25 @@ if uploaded:
             else:
                 lang_label = LANG_LABELS.get(lang_code, lang_code)
                 st.markdown(
-                    f"<div style='font-size:10px;letter-spacing:0.12em;color:#4a4a4a;margin-bottom:16px'>"
-                    f"감지 언어: {lang_label} · Vision OCR</div>",
+                    f"<div style='font-size:10px;letter-spacing:0.12em;color:#3a3a3a;margin-bottom:8px'>"
+                    f"{lang_label} · Vision OCR</div>",
                     unsafe_allow_html=True
                 )
-                with st.expander("OCR 원문 보기", expanded=False):
+                with st.expander("OCR 원문", expanded=False):
                     st.code(ocr_text, language=None)
 
                 with st.spinner("분석 중..."):
                     try:
                         result = analyze(ocr_text, lang_code)
-                        st.markdown("---")
-                        st.markdown(result)
                     except Exception as e:
                         st.error(str(e))
+                        result = None
+
+                if result:
+                    st.markdown('<hr class="tw-rule" style="margin:24px 0">', unsafe_allow_html=True)
+                    n = len(result.get("sentences", []))
+                    html = render_interactive(result, lang_code)
+                    components.html(html, height=max(500, n * 170) + 200, scrolling=True)
 
 
 # ── 하단 ──────────────────────────────────────────

@@ -249,14 +249,15 @@ def analyze(image_bytes, media_type):
     })
     env = dict(os.environ)
     env.pop('CLAUDECODE', None)
+    claude_bin = os.path.expanduser('~/.local/bin/claude')
     proc = subprocess.run(
-        ['claude', '--print', '--verbose',
+        [claude_bin, '--print', '--verbose',
          '--input-format', 'stream-json',
          '--output-format', 'stream-json'],
         input=msg, capture_output=True, text=True, env=env, timeout=120
     )
     if proc.returncode != 0:
-        raise RuntimeError(proc.stderr[:400] or "분석 실패")
+        raise RuntimeError(proc.stderr[:400] or f"claude 실행 실패 (code {proc.returncode})")
     for line in proc.stdout.splitlines():
         try:
             obj = json.loads(line)

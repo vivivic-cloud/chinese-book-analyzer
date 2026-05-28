@@ -2,35 +2,31 @@ import streamlit as st
 import base64
 import subprocess
 import os
+import json
 import tempfile
 import anthropic
 
 st.set_page_config(page_title="중국어 문장 분석기", page_icon="📖", layout="wide")
 st.title("📖 중국어 책 페이지 분석기")
 
-# API 키 설정
-CONFIG_FILE = os.path.join(os.path.dirname(__file__), '.api_key')
 
-def load_api_key():
-    if os.environ.get('ANTHROPIC_API_KEY'):
-        return os.environ['ANTHROPIC_API_KEY']
-    if os.path.exists(CONFIG_FILE):
-        return open(CONFIG_FILE).read().strip()
-    return ''
+def get_client():
+    # Claude Code 키체인에서 OAuth 토큰 자동 읽기
+    result = subprocess.run(
+        ['security', 'find-generic-password', '-s', 'Claude Code-credentials', '-w'],
+        capture_output=True, text=True
+    )
+    if result.returncode == 0:
+        creds = json.loads(result.stdout.strip())
+        token = creds.get('claudeAiOauth', {}).get('accessToken', '')
+        if token:
+            return anthropic.Anthropic(
+                auth_token=token,
+                base_url="https://api.anthropic.com",
+            )
+    st.error("Claude Code 로그인 정보를 찾을 수 없습니다. Claude Code를 먼저 실행해주세요.")
+    st.stop()
 
-def save_api_key(key):
-    with open(CONFIG_FILE, 'w') as f:
-        f.write(key)
-
-# 사이드바에 API 키 입력
-with st.sidebar:
-    st.header("설정")
-    saved_key = load_api_key()
-    api_key = st.text_input("Anthropic API 키", value=saved_key, type="password",
-                            help="https://console.anthropic.com 에서 발급")
-    if api_key and api_key != saved_key:
-        save_api_key(api_key)
-        st.success("API 키 저장됨")
 
 def encode_image(file_bytes, filename):
     ext = os.path.splitext(filename)[1].lower()
@@ -71,7 +67,6 @@ if uploaded:
         file_bytes = uploaded.read()
         ext = os.path.splitext(uploaded.name)[1].lower()
 
-        # HEIC는 미리보기를 위해 변환
         if ext in ['.heic', '.heif']:
             with tempfile.NamedTemporaryFile(suffix='.heic', delete=False) as tmp_in:
                 tmp_in.write(file_bytes)
@@ -86,31 +81,28 @@ if uploaded:
             st.image(file_bytes, caption=uploaded.name, use_container_width=True)
 
     with col2:
-        if not api_key:
-            st.warning("왼쪽 사이드바에 Anthropic API 키를 입력해주세요.")
-        else:
-            if st.button("🔍 분석하기", type="primary", use_container_width=True):
-                with st.spinner("분석 중..."):
-                    try:
-                        image_data, media_type = encode_image(file_bytes, uploaded.name)
-                        client = anthropic.Anthropic(api_key=api_key)
-                        response = client.messages.create(
-                            model="claude-opus-4-7",
-                            max_tokens=4096,
-                            messages=[{
-                                "role": "user",
-                                "content": [
-                                    {
-                                        "type": "image",
-                                        "source": {
-                                            "type": "base64",
-                                            "media_type": media_type,
-                                            "data": image_data,
-                                        }
-                                    },
-                                    {
-                                        "type": "text",
-                                        "text": """이 책 페이지의 중국어 텍스트를 분석해주세요.
+        if st.button("🔍 분석하기", type="primary", use_container_width=True):
+            with st.spinner("분석 중..."):
+                try:
+                    image_data, media_type = encode_image(file_bytes, uploaded.name)
+                    client = get_client()
+                    response = client.messages.create(
+                        model="claude-opus-4-7",
+                        max_tokens=4096,
+                        messages=[{
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "image",
+                                    "source": {
+                                        "type": "base64",
+                                        "media_type": media_type,
+                                        "data": image_data,
+                                    }
+                                },
+                                {
+                                    "type": "text",
+                                    "text": """이 책 페이지의 중국어 텍스트를 분석해주세요.
 
 ## 1. 원문
 (페이지 텍스트 전체)
@@ -125,10 +117,10 @@ if uploaded:
 - **번역**: 한국어
 - **주요 어휘**: 단어 - 병음 - 뜻
 - **문법 포인트**: 특이한 문법/표현 설명"""
-                                    }
-                                ]
-                            }]
-                        )
-                        st.markdown(response.content[0].text)
-                    except Exception as e:
-                        st.error(f"오류 발생: {e}")
+                                }
+                            ]
+                        }]
+                    )
+                    st.markdown(response.content[0].text)
+                except Exception as e:
+                    st.error(f"오류: {e}")

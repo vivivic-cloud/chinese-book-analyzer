@@ -3,17 +3,20 @@
 중국어분석기 — 클라우드 백엔드 (Render.com)
 Gemini Vision으로 OCR + 분석, TTS는 gTTS 사용
 """
-import os, re, json, base64, io, traceback
+import os, re, json, base64, io, traceback, sys
 from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 import google.generativeai as genai
+from google.generativeai.types import GenerationConfig
 
 # ── 초기화 ────────────────────────────────────────────────
 GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "")
+print(f"[startup] GEMINI_KEY set: {bool(GEMINI_KEY)}", flush=True)
+
 if GEMINI_KEY:
     genai.configure(api_key=GEMINI_KEY)
 
-model = genai.GenerativeModel("gemini-2.0-flash")
+model = genai.GenerativeModel("gemini-2.0-flash-exp")
 
 app = Flask(__name__)
 CORS(app)
@@ -51,18 +54,33 @@ def analyze():
         data = request.get_json()
         img_b64 = data.get("image", "")
         img_bytes = base64.b64decode(img_b64)
+        print(f"[analyze] image size: {len(img_bytes)} bytes", flush=True)
+
         response = model.generate_content(
-            [{"mime_type": "image/jpeg", "data": img_bytes},
-             ANALYSIS_PROMPT],
-            generation_config={"temperature": 0.1, "max_output_tokens": 4096}
+            contents=[
+                {
+                    "role": "user",
+                    "parts": [
+                        {
+                            "inline_data": {
+                                "mime_type": "image/jpeg",
+                                "data": base64.b64encode(img_bytes).decode()
+                            }
+                        },
+                        {"text": ANALYSIS_PROMPT}
+                    ]
+                }
+            ],
+            generation_config=GenerationConfig(temperature=0.1, max_output_tokens=4096)
         )
         text = response.text
+        print(f"[analyze] response length: {len(text)}", flush=True)
         m = re.search(r'\{[\s\S]*\}', text)
         if not m:
             return jsonify({"error": "JSON 파싱 실패: " + text[:120]}), 500
         return jsonify(json.loads(m.group()))
     except Exception as e:
-        traceback.print_exc()
+        traceback.print_exc(file=sys.stderr)
         return jsonify({"error": str(e)}), 500
 
 
@@ -89,7 +107,7 @@ def tts():
 # ── 헬스체크 ─────────────────────────────────────────────
 @app.route("/", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "key_set": bool(GEMINI_KEY)})
+    return jsonify({"status": "ok", "key_set": bool(GEMINI_KEY), "model": "gemini-2.0-flash-exp"})
 
 
 if __name__ == "__main__":

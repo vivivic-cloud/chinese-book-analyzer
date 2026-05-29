@@ -13,9 +13,7 @@ html,body{background:#1a1a1a;color:#c8c8c8;font-family:'Inter',-apple-system,Bli
 header{padding:22px 0;display:flex;justify-content:space-between;align-items:center}
 .logo{font-size:14px;color:#c8c8c8;letter-spacing:.01em}
 .logo b{font-weight:600;color:#fff}
-.btn-key{background:none;border:1px solid #2e2e2e;color:#555;cursor:pointer;font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-family:inherit;padding:6px 12px;transition:all .15s}
-.btn-key:hover{border-color:#555;color:#aaa}
-.btn-key.has-key{color:#4a7a4a;border-color:#2a4a2a}
+.badge{font-size:10px;color:#4a7a4a;letter-spacing:.1em;text-transform:uppercase;border:1px solid #2a4a2a;padding:3px 8px}
 hr.rule{border:none;border-top:1px solid #2e2e2e}
 .meta{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#555;text-align:right;padding:10px 0 20px}
 
@@ -74,13 +72,15 @@ input[type=file]{display:none}
 .token{cursor:pointer;border-bottom:1px solid transparent;transition:color .1s,border-color .1s;padding:0 1px}
 .token:hover{color:#fff;border-bottom-color:#777}
 .token.active{color:#fff;border-bottom-color:#aaa}
+.s-speak{background:none;border:none;cursor:pointer;font-size:13px;padding:0 0 0 8px;opacity:.25;transition:opacity .15s;vertical-align:middle;line-height:1}
+.s-speak:hover{opacity:.7}
 
 /* ── Popup ── */
 #popup{position:fixed;background:#202020;border:1px solid #333;padding:18px 20px;min-width:240px;max-width:300px;z-index:9999;display:none;box-shadow:0 16px 48px rgba(0,0,0,.9)}
 @media(max-width:500px){
   #popup{left:50%!important;transform:translateX(-50%);bottom:20px!important;top:auto!important;min-width:280px;max-width:calc(100vw - 32px)}
 }
-.pop-close{position:absolute;top:10px;right:12px;cursor:pointer;color:#555;font-size:13px;line-height:1}
+.pop-close{position:absolute;top:10px;right:12px;cursor:pointer;color:#555;font-size:13px}
 .pop-close:hover{color:#aaa}
 .pop-header{display:flex;align-items:center;gap:10px;margin-bottom:4px}
 .pop-word{font-size:26px;font-weight:300;color:#fff;letter-spacing:.04em}
@@ -89,44 +89,12 @@ input[type=file]{display:none}
 .pop-read{font-size:12px;color:#888;letter-spacing:.1em;margin-bottom:12px;font-style:italic}
 .pop-mean{font-size:14px;color:#c0c0c0;line-height:1.7;margin-bottom:8px}
 .pop-gram{font-size:10px;color:#666;letter-spacing:.12em;text-transform:uppercase}
-.s-speak{background:none;border:none;cursor:pointer;font-size:13px;padding:0 0 0 8px;opacity:.25;transition:opacity .15s;vertical-align:middle;line-height:1}
-.s-speak:hover{opacity:.7}
-
-/* ── API Key Modal ── */
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:10000;display:none;align-items:center;justify-content:center;padding:20px}
-.modal-bg.show{display:flex}
-.modal{background:#1e1e1e;border:1px solid #333;padding:32px;max-width:420px;width:100%}
-.modal h2{font-size:15px;font-weight:500;color:#e0e0e0;margin-bottom:8px;letter-spacing:.02em}
-.modal p{font-size:12px;color:#666;line-height:1.7;margin-bottom:20px}
-.modal a{color:#7aaa7a;text-decoration:none}
-.modal a:hover{text-decoration:underline}
-.key-input{width:100%;background:#141414;border:1px solid #333;color:#c8c8c8;font-size:13px;font-family:monospace;padding:12px;outline:none;margin-bottom:14px}
-.key-input:focus{border-color:#555}
-.key-input::placeholder{color:#444}
-.modal-btns{display:flex;gap:10px}
 
 footer{padding:14px 0;margin-top:50px;display:flex;justify-content:space-between;font-size:10px;color:#444;letter-spacing:.06em;border-top:1px solid #222}
 </style>
 </head>
 <body>
 
-<!-- API Key Modal -->
-<div class="modal-bg" id="modal">
-  <div class="modal">
-    <h2>Gemini API 키 설정</h2>
-    <p>
-      무료로 사용 가능한 Google Gemini API 키가 필요합니다.<br>
-      <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a> 에서 무료 발급 → 붙여넣기
-    </p>
-    <input class="key-input" id="key-input" type="password" placeholder="AIzaSy..." autocomplete="off" spellcheck="false">
-    <div class="modal-btns">
-      <button class="btn btn-go" onclick="saveKey()">저장</button>
-      <button class="btn" id="cancel-btn" onclick="closeModal()" style="display:none">취소</button>
-    </div>
-  </div>
-</div>
-
-<!-- Popup -->
 <div id="popup">
   <span class="pop-close" onclick="closePopup()">✕</span>
   <div class="pop-header">
@@ -141,7 +109,7 @@ footer{padding:14px 0;margin-top:50px;display:flex;justify-content:space-between
 <div class="wrap">
   <header>
     <div class="logo">중국어<b>.분석기</b></div>
-    <button class="btn-key" id="key-btn" onclick="openModal()">API 키</button>
+    <span class="badge">AI 분석</span>
   </header>
   <hr class="rule">
   <div class="meta">페이지 분석 ▶</div>
@@ -149,14 +117,14 @@ footer{padding:14px 0;margin-top:50px;display:flex;justify-content:space-between
   <div class="drop-zone" id="drop">
     <div class="drop-hint">
       이미지를 드래그하거나<br>
-      <small>HEIC · JPG · PNG · WEBP</small>
+      <small>JPG · PNG · WEBP · HEIC</small>
     </div>
     <div class="upload-btns">
       <button class="btn-file" onclick="document.getElementById('fi').click()">파일 선택</button>
       <button class="btn-camera" onclick="document.getElementById('cam').click()">📷 카메라</button>
     </div>
   </div>
-  <input type="file" id="fi" accept=".heic,.heif,.jpg,.jpeg,.png,.webp,image/*">
+  <input type="file" id="fi" accept="image/*,.heic,.heif">
   <input type="file" id="cam" accept="image/*" capture="environment">
 
   <div class="preview" id="preview">
@@ -185,105 +153,66 @@ footer{padding:14px 0;margin-top:50px;display:flex;justify-content:space-between
 </div>
 
 <script>
-// ── State ─────────────────────────────────────────────
-let imgB64 = null, imgMime = 'image/jpeg', detectedLang = 'zh';
-let currentWord = '', currentAudio = null;
+// ── 백엔드 URL (배포 후 Render URL로 교체됨) ──────────────
+const API = 'https://chinese-book-analyzer-api.onrender.com';
 
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+// ── State ─────────────────────────────────────────────────
+let imgB64 = null, detectedLang = 'zh', currentWord = '';
 
-const ANALYSIS_PROMPT = `이 이미지는 책 페이지입니다.
-텍스트를 OCR로 추출하고 분석하여 반드시 아래 JSON 형식으로만 응답하세요.
-마크다운, 설명 없이 순수 JSON만 출력하세요.
-
-{
-  "language": "zh|ja|ko|en",
-  "ocr": "원문 전체",
-  "sentences": [
-    {
-      "id": 1,
-      "original": "원문 문장",
-      "translation": "한국어 번역",
-      "tokens": [
-        {"text":"단어","pinyin":"병음(중국어)","reading":"읽기(일본어)","meaning":"한국어 뜻","grammar":"품사/문법"}
-      ]
+// ── TTS ───────────────────────────────────────────────────
+let currentAudio = null;
+async function speak(text, lang) {
+  if (!text) return;
+  if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+  try {
+    const url = `${API}/tts?text=${encodeURIComponent(text)}&lang=${lang || detectedLang}`;
+    const res  = await fetch(url);
+    if (!res.ok) throw new Error();
+    const blob = await res.blob();
+    const audio = new Audio(URL.createObjectURL(blob));
+    currentAudio = audio;
+    audio.play();
+    audio.onended = () => { URL.revokeObjectURL(audio.src); currentAudio = null; };
+  } catch {
+    // 폴백: 브라우저 TTS
+    if (window.speechSynthesis) {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = {zh:'zh-CN',ja:'ja-JP',ko:'ko-KR',en:'en-US'}[lang||detectedLang]||'zh-CN';
+      u.rate = 0.85;
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
     }
-  ]
-}
-
-tokens는 의미 단위(단어·숙어·문법요소)로 분리. 문장부호 제외.`;
-
-// ── API Key ───────────────────────────────────────────
-function getKey() { return localStorage.getItem('gemini_api_key') || ''; }
-function saveKey() {
-  const v = document.getElementById('key-input').value.trim();
-  if (!v) return;
-  localStorage.setItem('gemini_api_key', v);
-  closeModal();
-  updateKeyBtn();
-}
-function updateKeyBtn() {
-  const btn = document.getElementById('key-btn');
-  btn.textContent = getKey() ? '키 변경' : 'API 키';
-  btn.classList.toggle('has-key', !!getKey());
-}
-function openModal() {
-  document.getElementById('key-input').value = getKey();
-  document.getElementById('cancel-btn').style.display = getKey() ? '' : 'none';
-  document.getElementById('modal').classList.add('show');
-  setTimeout(() => document.getElementById('key-input').focus(), 100);
-}
-function closeModal() { document.getElementById('modal').classList.remove('show'); }
-document.getElementById('key-input').addEventListener('keydown', e => { if (e.key === 'Enter') saveKey(); });
-updateKeyBtn();
-if (!getKey()) openModal();
-
-// ── TTS (Web Speech API) ──────────────────────────────
-const VOICE_LANG = { zh:'zh-CN', ja:'ja-JP', ko:'ko-KR', en:'en-US' };
-
-function speak(text, lang) {
-  if (!text || !window.speechSynthesis) return;
-  speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = VOICE_LANG[lang || detectedLang] || 'zh-CN';
-  u.rate = 0.85;
-  // iOS에서 음성 로드 보장
-  const voices = speechSynthesis.getVoices();
-  const match = voices.find(v => v.lang.startsWith(u.lang.split('-')[0]));
-  if (match) u.voice = match;
-  speechSynthesis.speak(u);
+  }
 }
 function speakCurrent() { speak(currentWord, detectedLang); }
-// 음성 미리 로드 (iOS)
-if (window.speechSynthesis) speechSynthesis.getVoices();
 
-// ── Upload ────────────────────────────────────────────
+// ── Upload ────────────────────────────────────────────────
 const drop = document.getElementById('drop');
-const fi   = document.getElementById('fi');
-const cam  = document.getElementById('cam');
-
+['fi','cam'].forEach(id => {
+  document.getElementById(id).addEventListener('change', function() {
+    if (this.files?.[0]) readFile(this.files[0]);
+  });
+});
 drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
 drop.addEventListener('dragleave', () => drop.classList.remove('over'));
 drop.addEventListener('drop', e => {
   e.preventDefault(); drop.classList.remove('over');
   if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]);
 });
-fi.addEventListener('change', function() { if (this.files?.[0]) readFile(this.files[0]); });
-cam.addEventListener('change', function() { if (this.files?.[0]) readFile(this.files[0]); });
 
 function readFile(file) {
   clearErr(); clearResults(); setStatus('읽는 중...');
   const reader = new FileReader();
-  reader.onload = function(e) {
+  reader.onload = e => {
     const img = new Image();
-    img.onload = function() {
+    img.onload = () => {
       const MAX = 1600;
       let w = img.naturalWidth, h = img.naturalHeight;
-      if (w > MAX || h > MAX) { const r = Math.min(MAX/w, MAX/h); w = Math.round(w*r); h = Math.round(h*r); }
+      if (w > MAX || h > MAX) { const r = Math.min(MAX/w, MAX/h); w=Math.round(w*r); h=Math.round(h*r); }
       const c = document.createElement('canvas');
       c.width = w; c.height = h;
       c.getContext('2d').drawImage(img, 0, 0, w, h);
-      imgB64  = c.toDataURL('image/jpeg', 0.88).split(',')[1];
-      imgMime = 'image/jpeg';
+      imgB64 = c.toDataURL('image/jpeg', 0.88).split(',')[1];
       document.getElementById('prev-img').src = 'data:image/jpeg;base64,' + imgB64;
       document.getElementById('prev-name').textContent = file.name;
       document.getElementById('preview').classList.add('show');
@@ -296,10 +225,8 @@ function readFile(file) {
   reader.readAsDataURL(file);
 }
 
-// ── Analyze ───────────────────────────────────────────
+// ── Analyze ───────────────────────────────────────────────
 async function runAnalysis() {
-  const key = getKey();
-  if (!key) { openModal(); return; }
   if (!imgB64) { showErr('이미지를 먼저 올려주세요.'); return; }
   clearErr(); clearResults();
   document.getElementById('go-btn').disabled = true;
@@ -307,39 +234,18 @@ async function runAnalysis() {
   prog(20);
 
   let p = 20;
-  const tick = setInterval(() => { p = Math.min(p + 3, 85); prog(p); }, 2000);
+  const tick = setInterval(() => { p = Math.min(p + 3, 88); prog(p); }, 2000);
 
   try {
-    const res = await fetch(`${GEMINI_URL}?key=${key}`, {
+    const res = await fetch(`${API}/analyze`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{
-          parts: [
-            { inline_data: { mime_type: imgMime, data: imgB64 } },
-            { text: ANALYSIS_PROMPT }
-          ]
-        }],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 4096 }
-      })
+      body: JSON.stringify({ image: imgB64 })
     });
-
     clearInterval(tick);
-    const body = await res.json();
-
-    if (!res.ok) {
-      const msg = body?.error?.message || `오류 ${res.status}`;
-      throw new Error(msg);
-    }
-
-    const text = body?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    if (!text) throw new Error('응답이 비어 있습니다');
-
-    const m = text.match(/\{[\s\S]*\}/);
-    if (!m) throw new Error('JSON 파싱 실패: ' + text.slice(0, 120));
-    const data = JSON.parse(m[0]);
-
-    prog(100); setTimeout(() => prog(0), 600);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || `오류 ${res.status}`);
+    prog(100); setTimeout(() => prog(0), 500);
     setStatus('');
     render(data);
   } catch(e) {
@@ -349,48 +255,47 @@ async function runAnalysis() {
   document.getElementById('go-btn').disabled = false;
 }
 
-// ── Render ────────────────────────────────────────────
+// ── Render ────────────────────────────────────────────────
 const LANG_NAME = { zh:'🇨🇳 중국어', ja:'🇯🇵 일본어', ko:'🇰🇷 한국어', en:'🇺🇸 영어' };
 
 function render(data) {
   const lang = data.language || 'zh';
   detectedLang = lang;
   const space = ['ko','en'].includes(lang);
-  document.getElementById('lang-badge').textContent = (LANG_NAME[lang] || lang) + ' · Gemini';
+  document.getElementById('lang-badge').textContent = (LANG_NAME[lang]||lang) + ' · Gemini';
   if (data.ocr) {
     document.getElementById('ocr-box').textContent = data.ocr;
     document.getElementById('ocr-toggle').style.display = 'inline-block';
   }
   const list = document.getElementById('sent-list');
   list.innerHTML = '';
-  (data.sentences || []).forEach(s => {
+  (data.sentences||[]).forEach(s => {
     const div  = document.createElement('div'); div.className = 'sentence';
-    const num  = document.createElement('div'); num.className  = 's-num';  num.textContent = s.id;
+    const num  = document.createElement('div'); num.className = 's-num'; num.textContent = s.id;
     const body = document.createElement('div'); body.className = 's-body';
-
     const orig = document.createElement('div'); orig.className = 's-text';
-    (s.tokens || []).forEach((tok, i) => {
+
+    (s.tokens||[]).forEach((tok, i) => {
       const sp = document.createElement('span'); sp.className = 'token'; sp.textContent = tok.text;
       sp.addEventListener('click', e => { e.stopPropagation(); showPopup(tok, sp); });
       orig.appendChild(sp);
-      if (space && i < s.tokens.length - 1) orig.appendChild(document.createTextNode(' '));
+      if (space && i < s.tokens.length-1) orig.appendChild(document.createTextNode(' '));
     });
-    const spkBtn = document.createElement('button');
-    spkBtn.className = 's-speak'; spkBtn.textContent = '🔊'; spkBtn.title = '문장 발음';
-    const full = s.original || '';
-    spkBtn.addEventListener('click', e => { e.stopPropagation(); speak(full, lang); });
-    orig.appendChild(spkBtn);
+    const spk = document.createElement('button');
+    spk.className='s-speak'; spk.textContent='🔊'; spk.title='문장 발음';
+    spk.addEventListener('click', e => { e.stopPropagation(); speak(s.original||'', lang); });
+    orig.appendChild(spk);
 
-    const tr = document.createElement('div'); tr.className = 's-trans'; tr.textContent = s.translation || '';
+    const tr = document.createElement('div'); tr.className = 's-trans'; tr.textContent = s.translation||'';
     body.appendChild(orig); body.appendChild(tr);
     div.appendChild(num); div.appendChild(body);
     list.appendChild(div);
   });
   document.getElementById('results').classList.add('show');
-  document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.getElementById('results').scrollIntoView({ behavior:'smooth', block:'start' });
 }
 
-// ── Popup ─────────────────────────────────────────────
+// ── Popup ─────────────────────────────────────────────────
 const popup = document.getElementById('popup');
 let active = null;
 
@@ -403,39 +308,38 @@ function showPopup(tok, el) {
   document.getElementById('pm').textContent = tok.meaning || '';
   document.getElementById('pg').textContent = tok.grammar || '';
   popup.style.display = 'block';
-  // 모바일: CSS에서 bottom 고정 처리됨
   if (window.innerWidth > 500) {
-    const rect = el.getBoundingClientRect();
-    let x = rect.left, y = rect.bottom + 8;
+    const r = el.getBoundingClientRect();
+    let x = r.left, y = r.bottom + 8;
     if (x + 320 > window.innerWidth) x = window.innerWidth - 324;
-    if (y + 180 > window.innerHeight) y = rect.top - 185;
-    popup.style.left = Math.max(4, x) + 'px';
-    popup.style.top  = Math.max(4, y) + 'px';
+    if (y + 180 > window.innerHeight) y = r.top - 185;
+    popup.style.left = Math.max(4,x)+'px';
+    popup.style.top  = Math.max(4,y)+'px';
     popup.style.transform = '';
   }
 }
 function closePopup() {
-  popup.style.display = 'none';
-  if (active) { active.classList.remove('active'); active = null; }
+  popup.style.display='none';
+  if (active) { active.classList.remove('active'); active=null; }
 }
 document.addEventListener('click', e => {
   if (!popup.contains(e.target) && !e.target.classList.contains('token')) closePopup();
 });
 
-// ── Helpers ───────────────────────────────────────────
-function setStatus(t) { document.getElementById('status').textContent = t; }
-function prog(p) { document.getElementById('prog').classList.toggle('show', p > 0); document.getElementById('pfill').style.width = p + '%'; }
-function showErr(m) { const e = document.getElementById('err'); e.textContent = m; e.classList.add('show'); }
+// ── Helpers ───────────────────────────────────────────────
+function setStatus(t) { document.getElementById('status').textContent=t; }
+function prog(p) { document.getElementById('prog').classList.toggle('show',p>0); document.getElementById('pfill').style.width=p+'%'; }
+function showErr(m) { const e=document.getElementById('err'); e.textContent=m; e.classList.add('show'); }
 function clearErr() { document.getElementById('err').classList.remove('show'); }
 function clearResults() {
   document.getElementById('results').classList.remove('show');
-  document.getElementById('sent-list').innerHTML = '';
+  document.getElementById('sent-list').innerHTML='';
   document.getElementById('ocr-box').classList.remove('show');
 }
 function toggleOcr() {
-  const box = document.getElementById('ocr-box'), tog = document.getElementById('ocr-toggle');
-  box.classList.toggle('show');
-  tog.textContent = box.classList.contains('show') ? 'OCR 원문 ▾' : 'OCR 원문 ▸';
+  const b=document.getElementById('ocr-box'), t=document.getElementById('ocr-toggle');
+  b.classList.toggle('show');
+  t.textContent=b.classList.contains('show')?'OCR 원문 ▾':'OCR 원문 ▸';
 }
 </script>
 </body>

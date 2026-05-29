@@ -160,7 +160,6 @@ footer{padding:16px 0;margin-top:60px;display:flex;justify-content:space-between
   </footer>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
 <script>
 const KEY_STORE = 'gemini_api_key';
 const getKey = () => localStorage.getItem(KEY_STORE) || '';
@@ -172,59 +171,37 @@ function saveKey() {
   closeModal();
 }
 
-let imgB64 = null;
+let imgB64 = null, imgMime = 'image/jpeg';
 
 // ── Upload ────────────────────────────────────────────
 const drop = document.getElementById('drop');
 const fi = document.getElementById('fi');
 
-// label[for=fi] handles click natively — no JS needed
 drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
-drop.addEventListener('dragleave', e => { if (!drop.contains(e.relatedTarget)) drop.classList.remove('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
 drop.addEventListener('drop', e => {
   e.preventDefault(); drop.classList.remove('over');
-  if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
+  if (e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]);
 });
-fi.addEventListener('change', () => {
-  if (fi.files[0]) { processFile(fi.files[0]); fi.value = ''; }
+fi.addEventListener('change', function() {
+  if (this.files && this.files[0]) readFile(this.files[0]);
 });
 
-async function processFile(file) {
-  setStatus('처리 중...'); prog(20); clearErr(); clearResults();
-  try {
-    let blob = file;
-    const name = file.name.toLowerCase();
-    if (name.endsWith('.heic') || name.endsWith('.heif')) {
-      setStatus('HEIC 변환 중...');
-      blob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.85 });
-      if (Array.isArray(blob)) blob = blob[0];
-    }
-    prog(60);
-    imgB64 = await compress(blob);
-    document.getElementById('prev-img').src = 'data:image/jpeg;base64,' + imgB64;
+function readFile(file) {
+  clearErr(); clearResults();
+  setStatus('읽는 중...');
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const dataUrl = e.target.result;
+    imgMime = dataUrl.split(';')[0].replace('data:', '') || 'image/jpeg';
+    imgB64 = dataUrl.split(',')[1];
+    document.getElementById('prev-img').src = dataUrl;
     document.getElementById('prev-name').textContent = file.name;
     document.getElementById('preview').classList.add('show');
-    prog(0); setStatus('');
-  } catch(e) { showErr('파일 처리 실패: ' + e.message); prog(0); setStatus(''); }
-}
-
-function compress(blob) {
-  return new Promise((res, rej) => {
-    const url = URL.createObjectURL(blob);
-    const img = new Image();
-    img.onload = () => {
-      const MAX = 1400;
-      let w = img.naturalWidth, h = img.naturalHeight;
-      if (w > MAX || h > MAX) { const r = Math.min(MAX/w, MAX/h); w = Math.round(w*r); h = Math.round(h*r); }
-      const c = document.createElement('canvas');
-      c.width = w; c.height = h;
-      c.getContext('2d').drawImage(img, 0, 0, w, h);
-      URL.revokeObjectURL(url);
-      res(c.toDataURL('image/jpeg', 0.85).split(',')[1]);
-    };
-    img.onerror = () => rej(new Error('이미지 로드 실패'));
-    img.src = url;
-  });
+    setStatus('');
+  };
+  reader.onerror = function() { showErr('파일 읽기 실패'); setStatus(''); };
+  reader.readAsDataURL(file);
 }
 
 // ── Analyze (Gemini) ──────────────────────────────────
@@ -270,7 +247,7 @@ tokens는 의미 단위(단어·숙어·문법요소)로 분리. 문장부호는
         body: JSON.stringify({
           contents: [{
             parts: [
-              { inline_data: { mime_type: 'image/jpeg', data: imgB64 } },
+              { inline_data: { mime_type: imgMime, data: imgB64 } },
               { text: prompt }
             ]
           }],

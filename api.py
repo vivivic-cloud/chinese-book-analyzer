@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
 """
 중국어분석기 — 클라우드 백엔드 (Render.com)
-Gemini Vision으로 OCR + 분석, gTTS TTS
+Groq Vision으로 OCR + 분석, gTTS TTS
 """
 import os, re, json, base64, io, traceback, sys
 from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
-from google import genai
-from google.genai import types
+from groq import Groq
 
 # ── 초기화 ────────────────────────────────────────────────
-GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "")
-print(f"[startup] GEMINI_KEY set: {bool(GEMINI_KEY)}", flush=True)
+GROQ_KEY = os.environ.get("GROQ_API_KEY", "")
+print(f"[startup] GROQ_KEY set: {bool(GROQ_KEY)}", flush=True)
 
-client = genai.Client(api_key=GEMINI_KEY) if GEMINI_KEY else None
+client = Groq(api_key=GROQ_KEY) if GROQ_KEY else None
 
 app = Flask(__name__)
 CORS(app)
@@ -46,25 +45,36 @@ def analyze():
     if request.method == "OPTIONS":
         return Response(status=200)
     if not client:
-        return jsonify({"error": "서버에 GEMINI_API_KEY가 설정되지 않았습니다"}), 500
+        return jsonify({"error": "서버에 GROQ_API_KEY가 설정되지 않았습니다"}), 500
     try:
         data = request.get_json()
         img_b64 = data.get("image", "")
-        img_bytes = base64.b64decode(img_b64)
-        print(f"[analyze] image size: {len(img_bytes)} bytes", flush=True)
+        print(f"[analyze] image b64 length: {len(img_b64)}", flush=True)
 
-        response = client.models.generate_content(
-            model="gemini-1.5-flash",
-            contents=[
-                types.Part.from_bytes(data=img_bytes, mime_type="image/jpeg"),
-                ANALYSIS_PROMPT
+        response = client.chat.completions.create(
+            model="meta-llama/llama-4-scout-17b-16e-instruct",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{img_b64}"
+                            }
+                        },
+                        {
+                            "type": "text",
+                            "text": ANALYSIS_PROMPT
+                        }
+                    ]
+                }
             ],
-            config=types.GenerateContentConfig(
-                temperature=0.1,
-                max_output_tokens=4096
-            )
+            temperature=0.1,
+            max_tokens=4096
         )
-        text = response.text
+
+        text = response.choices[0].message.content
         print(f"[analyze] response length: {len(text)}", flush=True)
         m = re.search(r'\{[\s\S]*\}', text)
         if not m:
@@ -98,7 +108,7 @@ def tts():
 # ── 헬스체크 ─────────────────────────────────────────────
 @app.route("/", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "key_set": bool(GEMINI_KEY), "model": "gemini-1.5-flash"})
+    return jsonify({"status": "ok", "key_set": bool(GROQ_KEY), "model": "llama-4-scout-17b"})
 
 
 if __name__ == "__main__":

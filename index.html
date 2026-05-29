@@ -243,9 +243,7 @@ tokens는 의미 단위(단어·숙어·문법요소)로 분리. 문장부호는
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${key}`,
-        'HTTP-Referer': 'https://vivivic-cloud.github.io',
-        'X-Title': 'Book Analyzer'
+        'Authorization': 'Bearer ' + key
       },
       body: JSON.stringify({
         model: 'meta-llama/llama-3.2-11b-vision-instruct:free',

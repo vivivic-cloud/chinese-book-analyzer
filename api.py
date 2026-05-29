@@ -4,10 +4,8 @@
 Gemini Vision으로 OCR + 분석, TTS는 gTTS 사용
 """
 import os, re, json, base64, io
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response, StreamingResponse
-from pydantic import BaseModel
+from flask import Flask, request, jsonify, Response
+from flask_cors import CORS
 import google.generativeai as genai
 
 # ── 초기화 ────────────────────────────────────────────────
@@ -17,13 +15,8 @@ if GEMINI_KEY:
 
 model = genai.GenerativeModel("gemini-1.5-flash")
 
-app = FastAPI()
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["POST", "GET", "OPTIONS"],
-    allow_headers=["*"],
-)
+app = Flask(__name__)
+CORS(app)
 
 ANALYSIS_PROMPT = """이 이미지는 책 페이지입니다.
 텍스트를 OCR로 추출하고 분석하여 반드시 아래 JSON 형식으로만 응답하세요.
@@ -47,22 +40,17 @@ ANALYSIS_PROMPT = """이 이미지는 책 페이지입니다.
 tokens는 의미 단위(단어·숙어·문법요소)로 분리. 문장부호 제외."""
 
 
-# ── 요청 모델 ─────────────────────────────────────────────
-class AnalyzeRequest(BaseModel):
-    image: str  # base64 JPEG
-
-class TtsRequest(BaseModel):
-    text: str
-    lang: str = "zh"
-
-
 # ── 분석 엔드포인트 ───────────────────────────────────────
-@app.post("/analyze")
-async def analyze(req: AnalyzeRequest):
+@app.route("/analyze", methods=["POST", "OPTIONS"])
+def analyze():
+    if request.method == "OPTIONS":
+        return Response(status=200)
     if not GEMINI_KEY:
-        raise HTTPException(500, "서버에 GEMINI_API_KEY가 설정되지 않았습니다")
+        return jsonify({"error": "서버에 GEMINI_API_KEY가 설정되지 않았습니다"}), 500
     try:
-        img_bytes = base64.b64decode(req.image)
+        data = request.get_json()
+        img_b64 = data.get("image", "")
+        img_bytes = base64.b64decode(img_b64)
         response = model.generate_content(
             [{"mime_type": "image/jpeg", "data": base64.b64encode(img_bytes).decode()},
              ANALYSIS_PROMPT],
@@ -71,31 +59,37 @@ async def analyze(req: AnalyzeRequest):
         text = response.text
         m = re.search(r'\{[\s\S]*\}', text)
         if not m:
-            raise HTTPException(500, "JSON 파싱 실패: " + text[:120])
-        return json.loads(m.group())
-    except HTTPException:
-        raise
+            return jsonify({"error": "JSON 파싱 실패: " + text[:120]}), 500
+        return jsonify(json.loads(m.group()))
     except Exception as e:
-        raise HTTPException(500, str(e))
+        return jsonify({"error": str(e)}), 500
 
 
 # ── TTS 엔드포인트 ────────────────────────────────────────
 LANG_MAP = {"zh": "zh-CN", "ja": "ja", "ko": "ko", "en": "en"}
 
-@app.get("/tts")
-async def tts(text: str, lang: str = "zh"):
+@app.route("/tts", methods=["GET"])
+def tts():
     try:
         from gtts import gTTS
+        text = request.args.get("text", "").strip()
+        lang = request.args.get("lang", "zh")
+        if not text:
+            return Response(status=400)
         buf = io.BytesIO()
         gTTS(text=text, lang=LANG_MAP.get(lang, "zh-CN"), slow=False).write_to_fp(buf)
         buf.seek(0)
-        return Response(content=buf.read(), media_type="audio/mpeg",
+        return Response(buf.read(), mimetype="audio/mpeg",
                         headers={"Cache-Control": "no-cache"})
     except Exception as e:
-        raise HTTPException(500, str(e))
+        return jsonify({"error": str(e)}), 500
 
 
 # ── 헬스체크 ─────────────────────────────────────────────
-@app.get("/")
+@app.route("/", methods=["GET"])
 def health():
-    return {"status": "ok", "key_set": bool(GEMINI_KEY)}
+    return jsonify({"status": "ok", "key_set": bool(GEMINI_KEY)})
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))

@@ -54,7 +54,7 @@ def analyze():
         print(f"[analyze] image size: {len(img_bytes)} bytes", flush=True)
 
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-1.5-flash",
             contents=[
                 types.Part.from_bytes(data=img_bytes, mime_type="image/jpeg"),
                 ANALYSIS_PROMPT
@@ -98,7 +98,7 @@ def tts():
 # ── 헬스체크 ─────────────────────────────────────────────
 @app.route("/", methods=["GET"])
 def health():
-    return jsonify({"status": "ok", "key_set": bool(GEMINI_KEY), "model": "gemini-2.0-flash"})
+    return jsonify({"status": "ok", "key_set": bool(GEMINI_KEY), "model": "gemini-1.5-flash"})
 
 
 if __name__ == "__main__":

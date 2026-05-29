@@ -3,7 +3,7 @@
 중국어분석기 — 클라우드 백엔드 (Render.com)
 Gemini Vision으로 OCR + 분석, TTS는 gTTS 사용
 """
-import os, re, json, base64, io
+import os, re, json, base64, io, traceback
 from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 import google.generativeai as genai
@@ -52,7 +52,7 @@ def analyze():
         img_b64 = data.get("image", "")
         img_bytes = base64.b64decode(img_b64)
         response = model.generate_content(
-            [{"mime_type": "image/jpeg", "data": base64.b64encode(img_bytes).decode()},
+            [{"mime_type": "image/jpeg", "data": img_bytes},
              ANALYSIS_PROMPT],
             generation_config={"temperature": 0.1, "max_output_tokens": 4096}
         )
@@ -62,6 +62,7 @@ def analyze():
             return jsonify({"error": "JSON 파싱 실패: " + text[:120]}), 500
         return jsonify(json.loads(m.group()))
     except Exception as e:
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 
